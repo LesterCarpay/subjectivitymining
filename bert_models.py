@@ -67,7 +67,7 @@ def load_data(dataset):
     if dataset == "hatexplain":
         return load_hatexplain_data()
     if dataset == "olid":
-        load_olid_data()
+        return load_olid_data()
     raise ValueError("Provided model invalid, choose hatexplain or olid.")
 
 def create_model(model_name, use_cuda= False):
@@ -107,15 +107,15 @@ def create_model(model_name, use_cuda= False):
 if __name__== '__main__':
     parser = argparse.ArgumentParser(description='Run BERT models for HS detection.')
     parser.add_argument("--model", help="The model to use (bert/hatebert/fbert)", default="bert")
-    # parser.add_argument("--dataset", help="The dataset to use (hateval)", default=hateval)
+    parser.add_argument("--dataset", help="The dataset to use (hateval)", default="hatexplain")
 
     args = parser.parse_args()
 
-    train_data, test_data = load_hatexplain_data()
+    train_data, test_data = load_data(args.dataset)
 
-    model = create_model(args.model, use_cuda= False)
+    model = create_model(args.model, use_cuda= True)
 
-    # torch.cuda.empty_cache()
+    torch.cuda.empty_cache()
 
     print("training model...")
     model.train_model(train_data)
