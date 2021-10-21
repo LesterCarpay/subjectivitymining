@@ -8,7 +8,7 @@ import argparse
 
 parser = argparse.ArgumentParser(description='Run BERT models for HS detection.')
 parser.add_argument("--model", help="The model to use (bert/hatebert/fbert)", default="bert")
-# parser.add_argument("--dataset", help="The dataset to use (hateval)", default=hateval)
+parser.add_argument("--dataset", help="The dataset to use for training (hatexplain/olid)", default="hatexplain")
 
 args = parser.parse_args()
 
@@ -25,13 +25,11 @@ def load_hatexplain_data():
         else:
             return 0
 
-    print("loading data...")
     #load datasets
     train_data = load_dataset("hatexplain", split="train")
     test_data = load_dataset("hatexplain", split="test")
     #there is also a validation dataset, could load later
 
-    print("processing data...")
     #convert to pandas
     train_data = train_data.to_pandas()
     test_data = test_data.to_pandas()
@@ -52,6 +50,29 @@ def load_hatexplain_data():
     test_data["text"] = test_data["post_tokens"].map(" ".join)
 
     return train_data, test_data
+
+def load_olid_data():
+    train_path = os.path.join("data", "OLID", "trainData.csv")
+    test_path = os.path.join("data", "OLID", "testData.csv")
+
+    train_data = pd.read_csv(train_path, delimiter="\t")
+    test_data = pd.read_csv(test_path, delimiter="\t")
+
+    train_data.rename({"Text": "text"}, axis=1, inplace=True)
+    test_data.rename({"Text": "text"}, axis=1, inplace=True)
+
+    train_data["labels"] = train_data["Label"].map(lambda x: int(x == "OFF"))
+    test_data["labels"] = test_data["Label"].map(lambda x: int(x == "OFF"))
+
+    return train_data, test_data
+
+def load_dataset(dataset):
+    print("loading", dataset, "data...")
+    if dataset == "hatexplain":
+        return load_hatexplain_data()
+    if dataset == "olid":
+        load_olid_data()
+    raise ValueError("Provided model invalid, choose hatexplain or olid.")
 
 
 train_data, test_data = load_hatexplain_data()
