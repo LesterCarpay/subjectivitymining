@@ -127,6 +127,40 @@ def create_model(model_name, use_cuda= False):
         raise ValueError("Provided model invalid. Specify bert, hatebert or fbert.")
     return model
 
+def test_on_all_datasets(model):
+    def print_results(name, result, wrong):
+        print("-"*50)
+        print(name)
+        print("-"*50)
+        precision = result["tp"]/(result["tp"] + result["fp"])
+        recall = result["tp"]/(result["tp"] + result["fn"])
+        f1 = 2*precision*recall/(precision + recall)
+
+        print("Precision:", precision)
+        print("Recall:", recall)
+        print("f1:", f1)
+        print("Examples of wrong predictions:")
+        print(wrong[:10])
+
+    print("evaluating model...")
+    # test on hatexplain
+    _, test_data = load_hatexplain_data()
+    result_h, _, wrong_h = model.eval_model(test_data)
+
+
+    # test on olid
+    _, test_data = load_olid_data()
+    result_o, _, wrong_o = model.eval_model(test_data)
+
+    # test on davidson
+    _, test_data = load_davidson_data()
+    result_d, _, wrong_d = model.eval_model(test_data)
+
+    #print results
+    print_results("HATEXPLAIN", result_h, wrong_h)
+    print_results("OLID", result_o, wrong_o)
+    print_results("DAVIDSON", result_d, wrong_d)
+
 
 if __name__== '__main__':
     parser = argparse.ArgumentParser(description='Run BERT models for HS detection.')
@@ -144,13 +178,4 @@ if __name__== '__main__':
     print("training model...")
     model.train_model(train_data)
 
-    print("evaluating model...")
-    result, model_outputs, wrong_predictions = model.eval_model(test_data)
-
-    precision = result["tp"]/(result["tp"] + result["fp"])
-    recall = result["tp"]/(result["tp"] + result["fn"])
-    f1 = 2*precision*recall/(precision + recall)
-
-    print("Precision:", precision)
-    print("Recall:", recall)
-    print("f1:", f1)
+    test_on_all_datasets(model)
