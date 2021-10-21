@@ -62,13 +62,37 @@ def load_olid_data():
 
     return train_data, test_data
 
+def load_davidson_data():
+  #load datasets
+  data = load_dataset("hate_speech_offensive", split="train")
+  #1/3 = test
+  train_data=data[0:16522]
+  test_data=data[16522:24783]
+
+  print("processing data...")
+  #convert to pandas
+  train_data = pd.DataFrame.from_dict(train_data)
+  test_data = pd.DataFrame.from_dict(test_data)
+
+  train_data["labels"] = train_data["hate_speech_count"]
+  test_data["labels"] = test_data["hate_speech_count"]
+
+  train_data["text"] = train_data["tweet"]
+  test_data["text"] = test_data["tweet"]
+  train_data=train_data[["labels","text"]]
+  test_data=test_data[["labels","text"]]
+
+  return train_data, test_data
+
 def load_data(dataset):
     print("loading", dataset, "data...")
     if dataset == "hatexplain":
         return load_hatexplain_data()
     if dataset == "olid":
         return load_olid_data()
-    raise ValueError("Provided model invalid, choose hatexplain or olid.")
+    if dataset == "davidson":
+        return load_davidson_data()
+    raise ValueError("Provided model invalid, choose hatexplain, olid or davidson.")
 
 def create_model(model_name, use_cuda= False):
     #setup logger
@@ -107,7 +131,7 @@ def create_model(model_name, use_cuda= False):
 if __name__== '__main__':
     parser = argparse.ArgumentParser(description='Run BERT models for HS detection.')
     parser.add_argument("--model", help="The model to use (bert/hatebert/fbert)", default="bert")
-    parser.add_argument("--dataset", help="The dataset to use (hateval)", default="hatexplain")
+    parser.add_argument("--dataset", help="The dataset to use (hatexplain/olid/davidson)", default="hatexplain")
 
     args = parser.parse_args()
 
