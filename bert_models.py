@@ -2,15 +2,11 @@ from datasets import load_dataset
 from simpletransformers.classification import ClassificationModel, ClassificationArgs
 import logging
 import pandas as pd
-import sklearn
 import argparse
+import torch
+import os
 
 
-parser = argparse.ArgumentParser(description='Run BERT models for HS detection.')
-parser.add_argument("--model", help="The model to use (bert/hatebert/fbert)", default="bert")
-parser.add_argument("--dataset", help="The dataset to use for training (hatexplain/olid)", default="hatexplain")
-
-args = parser.parse_args()
 
 def load_hatexplain_data():
 
@@ -66,7 +62,7 @@ def load_olid_data():
 
     return train_data, test_data
 
-def load_dataset(dataset):
+def load_data(dataset):
     print("loading", dataset, "data...")
     if dataset == "hatexplain":
         return load_hatexplain_data()
@@ -74,43 +70,63 @@ def load_dataset(dataset):
         load_olid_data()
     raise ValueError("Provided model invalid, choose hatexplain or olid.")
 
+def create_model(model_name, use_cuda= False):
+    #setup logger
+    logging.basicConfig(level=logging.INFO)
+    transformers_logger = logging.getLogger("transformers")
+    transformers_logger.setLevel(logging.WARNING)
 
-train_data, test_data = load_hatexplain_data()
 
-#setup logger
-logging.basicConfig(level=logging.INFO)
-transformers_logger = logging.getLogger("transformers")
-transformers_logger.setLevel(logging.WARNING)
+    print("loading model...")
+    # Optional model configuration
+    model_args = ClassificationArgs(num_train_epochs=3, train_batch_size=1)
 
-print("loading model...")
-# Optional model configuration
-model_args = ClassificationArgs(num_train_epochs=1)
+    # Create a ClassificationModel depending on provided model
+    if model_name == "bert":
+        print("loading bert...")
+        model = ClassificationModel(
+            "bert", "bert-base-uncased", args=model_args, use_cuda=use_cuda
+        )
+    elif model_name == "hatebert":
+        print("loading hatebert...")
+        model = ClassificationModel(
+            "bert", "GroNLP/hateBERT", args=model_args, use_cuda=use_cuda,
+            tokenizer_type="bert", tokenizer_name="GroNLP/hateBERT"
+        )
+    elif model_name == "fbert":
+        print("loading fbert...")
+        model = ClassificationModel(
+            "bert", "diptanu/fBERT", args=model_args, use_cuda=use_cuda,
+            tokenizer_type="bert", tokenizer_name="diptanu/fBERT"
+        )
+    else:
+        raise ValueError("Provided model invalid. Specify bert, hatebert or fbert.")
+    return model
 
-# Create a ClassificationModel depending on provided model
-if args.model == "bert":
-    print("loading bert...")
-    model = ClassificationModel(
-        "bert", "bert-base-uncased", args=model_args, use_cuda=False
-    )
-elif args.model == "hatebert":
-    print("loading hatebert...")
-    model = ClassificationModel(
-        "bert", "GroNLP/hateBERT", args=model_args, use_cuda=False,
-        tokenizer_type="bert", tokenizer_name="GroNLP/hateBERT"
-    )
-elif args.model == "fbert":
-    print("loading fbert...")
-    model = ClassificationModel(
-        "bert", "diptanu/fBERT", args=model_args, use_cuda=False,
-        tokenizer_type="bert", tokenizer_name="diptanu/fBERT"
-    )
-else:
-    raise ValueError("Provided model invalid. Specify bert, hatebert or fbert.")
 
-print("training model...")
-model.train_model(train_data)
+if __name__== '__main__':
+    parser = argparse.ArgumentParser(description='Run BERT models for HS detection.')
+    parser.add_argument("--model", help="The model to use (bert/hatebert/fbert)", default="bert")
+    # parser.add_argument("--dataset", help="The dataset to use (hateval)", default=hateval)
 
-print("evaluating model...")
-result, model_outputs, wrong_predictions = model.eval_model(test_data)
+    args = parser.parse_args()
 
-print(result)
+    train_data, test_data = load_hatexplain_data()
+
+    model = create_model(args.model, use_cuda= False)
+
+    # torch.cuda.empty_cache()
+
+    print("training model...")
+    model.train_model(train_data)
+
+    print("evaluating model...")
+    result, model_outputs, wrong_predictions = model.eval_model(test_data)
+
+    precision = result["tp"]/(result["tp"] + result["fp"])
+    recall = result["tp"]/(result["tp"] + result["fn"])
+    f1 = 2*precision*recall/(precision + recall)
+
+    print("Precision:", precision)
+    print("Recall:", recall)
+    print("f1:", f1)
