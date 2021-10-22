@@ -62,26 +62,28 @@ def load_olid_data():
 
     return train_data, test_data
 
-def load_davidson_data():
+def load_davidson_data(): 
+  print("loading data...")
   #load datasets
   data = load_dataset("hate_speech_offensive", split="train")
-  #1/3 = test
-  train_data=data[0:16522]
-  test_data=data[16522:24783]
+  data = pd.DataFrame.from_dict(data)
+  
+  data["labels"]= data["class"]
+  data["labels"][data["labels"] > 0] = -1
+  data["labels"][data["labels"] ==0 ] = 1
+  data["labels"][data["labels"] < 0] = 0
+
+  data["text"] = data["tweet"]
 
   print("processing data...")
-  #convert to pandas
-  train_data = pd.DataFrame.from_dict(train_data)
-  test_data = pd.DataFrame.from_dict(test_data)
 
-  train_data["labels"] = train_data["hate_speech_count"]
-  test_data["labels"] = test_data["hate_speech_count"]
+  data=data[["labels","text"]]
 
-  train_data["text"] = train_data["tweet"]
-  test_data["text"] = test_data["tweet"]
-  train_data=train_data[["labels","text"]]
-  test_data=test_data[["labels","text"]]
-
+  x_train, x_test, y_train, y_test = train_test_split(data["text"],data["labels"],test_size=0.33,stratify=data["labels"])
+  train_list = list(zip(x_train,y_train))
+  test_list = list(zip(x_test,y_test))
+  train_data = pd.DataFrame(train_list,columns = ["text","labels"])
+  test_data = pd.DataFrame(test_list,columns = ["text","labels"])
   return train_data, test_data
 
 def load_data(dataset):
