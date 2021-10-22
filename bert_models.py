@@ -1,5 +1,6 @@
 from datasets import load_dataset
 from simpletransformers.classification import ClassificationModel, ClassificationArgs
+from sklearn.model_selection import train_test_split
 import logging
 import pandas as pd
 import argparse
@@ -62,12 +63,12 @@ def load_olid_data():
 
     return train_data, test_data
 
-def load_davidson_data(): 
+def load_davidson_data():
   print("loading data...")
   #load datasets
   data = load_dataset("hate_speech_offensive", split="train")
   data = pd.DataFrame.from_dict(data)
-  
+
   data["labels"]= data["class"]
   data["labels"][data["labels"] > 0] = -1
   data["labels"][data["labels"] ==0 ] = 1
