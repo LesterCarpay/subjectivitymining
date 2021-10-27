@@ -67,7 +67,7 @@ def load_davidson_data():
   print("loading data...")
   #load datasets
   data = load_dataset("hate_speech_offensive", split="train")
-  data = pd.DataFrame.from_dict(data)
+  data = data.to_pandas()
 
   data["labels"]= data["class"]
   data["labels"][data["labels"] > 0] = -1
@@ -79,6 +79,14 @@ def load_davidson_data():
   print("processing data...")
 
   data=data[["labels","text"]]
+
+  pos_data = data[data["labels"] == 1]
+  neg_data = data[data["labels"] == 0]
+  neg_data = neg_data.sample(n=len(pos_data)*2) #ensures 1:2 ratio
+
+  data = pd.concat([pos_data,neg_data])
+  data = data.sample(frac=1)
+
 
   x_train, x_test, y_train, y_test = train_test_split(data["text"],data["labels"],test_size=0.33,stratify=data["labels"])
   train_list = list(zip(x_train,y_train))
